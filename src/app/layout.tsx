@@ -17,6 +17,9 @@ const geistMono = Geist_Mono({
 const parkinsans = Parkinsans({
   variable: "--font-parkinsans",
   subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800"],
+  fallback: ["system-ui", "sans-serif"],
+  adjustFontFallback: false,
 });
 
 export const metadata: Metadata = {
@@ -34,7 +37,7 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en" suppressHydrationWarning>
         <body
-          className={`${geistSans.variable} ${geistMono.variable} ${parkinsans.variable} antialiased`}
+          className={`${geistSans.className} ${geistMono.className} ${parkinsans.className} antialiased`}
         >
           <ThemeProvider
             attribute="class"
