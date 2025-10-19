@@ -1,28 +1,28 @@
-# Contributing to CodeGuide Starter Kit
+# Contribuer à EVA Note
 
-We welcome contributions to the CodeGuide Starter Kit! This document provides guidelines for contributing to the project.
+Merci d’aider à construire l’outil de documentation kiné EVA Note. Ce guide résume les attentes avant toute PR.
 
 ## Getting Started
 
-1. Fork the repository
-2. Clone your fork locally
-3. Install dependencies: `npm install`
-4. Copy `.env.example` to `.env.local` and configure your environment variables
-5. Start the development server: `npm run dev`
+1. Forker le dépôt
+2. Cloner localement
+3. Installer les dépendances : `npm install`
+4. Copier `.env.example` vers `.env.local` et renseigner les variables (Clerk, Supabase, Azure, Deepgram)
+5. Lancer l’app : `npm run dev`
 
 ## Development Process
 
 ### Setting Up Your Development Environment
 
 1. **Prerequisites**:
-   - Node.js 18 or later
-   - npm or yarn package manager
+   - Node.js 18+
+   - npm
    - Git
 
 2. **Environment Setup**:
-   - Follow the setup instructions in `SUPABASE_CLERK_SETUP.md`
-   - Ensure all required environment variables are configured
-   - Test the application runs correctly with `npm run dev`
+   - Suivre `SUPABASE_CLERK_SETUP.md`
+   - Vérifier les variables d’environnement (Clerk EU, Supabase EU, Azure, Deepgram)
+   - Lancer `npm run dev` pour confirmer le setup
 
 ### Making Changes
 
@@ -33,7 +33,7 @@ We welcome contributions to the CodeGuide Starter Kit! This document provides gu
 
 2. Make your changes following our coding standards (see below)
 
-3. Test your changes thoroughly:
+3. Exécuter les tests de base :
    ```bash
    npm run lint
    npm run build
@@ -86,16 +86,16 @@ We welcome contributions to the CodeGuide Starter Kit! This document provides gu
 - [ ] Build succeeds (`npm run build`)
 
 ### PR Description
-Please include:
-- Clear description of what the PR does
-- Why the change is needed
-- Screenshots for UI changes
-- Any breaking changes or migration notes
+Inclure dans la PR :
+- Résumé clair des changements
+- Raisons/business value
+- Captures d’écran pour les modifications UI
+- Notes sur migrations Supabase / impacts réglementaires
 
 ### Review Process
-- All PRs require at least one review
-- Address all review feedback before merging
-- Maintain a clean git history
+- Toute PR nécessite au moins une revue
+- Intégrer les retours avant merge
+- Garder un historique git propre
 
 ## Types of Contributions
 
@@ -172,4 +172,4 @@ CREATE POLICY "Users can manage own records" ON example_table
 - Ask questions in pull request discussions
 - Reach out to maintainers for guidance
 
-Thank you for contributing to CodeGuide Starter Kit!
+Merci de contribuer à EVA Note !

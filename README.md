@@ -1,186 +1,78 @@
-[![CodeGuide](/codeguide-backdrop.svg)](https://codeguide.dev)
+# EVA Note
 
-# CodeGuide Starter Kit
+MVP web pour kinésithérapeutes : enregistrer la séance, transcrire en direct, générer une note SOAP en allemand et la sauvegarder par patient.
 
-A modern web application starter template built with Next.js 15, featuring authentication, database integration, AI capabilities, and dark mode support.
+## Objectifs MVP
 
-## Tech Stack
+- Authentification Clerk (tenant EU).
+- Gestion minimale des patients (prénom/nom, sélection).
+- Visite avec transcription temps réel Deepgram (Nova-3 DE) ou saisie manuelle.
+- Génération SOAP détaillée via Azure OpenAI (gpt-4o-mini).
+- Édition / sauvegarde des notes avec historique et copie rapide.
 
-- **Framework:** [Next.js 15](https://nextjs.org/) (App Router)
-- **Language:** TypeScript
-- **Authentication:** [Clerk](https://clerk.com/)
-- **Database:** [Supabase](https://supabase.com/)
-- **Styling:** [Tailwind CSS v4](https://tailwindcss.com/)
-- **UI Components:** [shadcn/ui](https://ui.shadcn.com/)
-- **AI Integration:** [Vercel AI SDK](https://sdk.vercel.ai/)
-- **Theme System:** [next-themes](https://github.com/pacocoursey/next-themes)
+Cf. `eva_note_mvp_prd_system_design_build_plan.md` pour le PRD complet, le design système et la roadmap technique.
 
-## Prerequisites
+## Pile technique
 
-Before you begin, ensure you have the following:
-- Node.js 18+ installed
-- A [Clerk](https://clerk.com/) account for authentication
-- A [Supabase](https://supabase.com/) account for database
-- Optional: [OpenAI](https://platform.openai.com/) or [Anthropic](https://console.anthropic.com/) API key for AI features
-- Generated project documents from [CodeGuide](https://codeguide.dev/) for best development experience
+- Next.js 15 (App Router), React 19, TypeScript strict.
+- Tailwind CSS v4 + shadcn/ui (New York) pour l’UI.
+- Clerk (auth) + Supabase (données, RLS par utilisateur Clerk).
+- Deepgram WebSocket pour la transcription, Azure OpenAI pour la génération SOAP.
+- Vercel AI SDK (client / server actions) configuré Azure.
 
-## Getting Started
+## Installation
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd codeguide-starter-kit
-   ```
+```bash
+npm install
+npm run dev
+# http://localhost:3000
+```
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   # or
-   yarn install
-   # or
-   pnpm install
-   ```
+## Variables d’environnement
 
-3. **Environment Variables Setup**
-   - Copy the `.env.example` file to `.env.local`:
-     ```bash
-     cp .env.example .env.local
-     ```
-   - Fill in the environment variables in `.env.local` (see Configuration section below)
-
-4. **Start the development server**
-   ```bash
-   npm run dev
-   # or
-   yarn dev
-   # or
-   pnpm dev
-   ```
-
-5. **Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.**
-
-The homepage includes a setup dashboard with direct links to configure each service.
-
-## Configuration
-
-### Clerk Setup
-1. Go to [Clerk Dashboard](https://dashboard.clerk.com/)
-2. Create a new application
-3. Go to API Keys
-4. Copy the `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY`
-
-### Supabase Setup
-1. Go to [Supabase Dashboard](https://supabase.com/dashboard)
-2. Create a new project
-3. Go to Authentication → Integrations → Add Clerk (for third-party auth)
-4. Go to Project Settings > API
-5. Copy the `Project URL` as `NEXT_PUBLIC_SUPABASE_URL`
-6. Copy the `anon` public key as `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-
-### AI Integration Setup (Optional)
-1. Go to [OpenAI Platform](https://platform.openai.com/) or [Anthropic Console](https://console.anthropic.com/)
-2. Create an API key
-3. Add to your environment variables
-
-## Environment Variables
-
-Create a `.env.local` file in the root directory with the following variables:
-
-```env
-# Clerk Authentication
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_publishable_key
-CLERK_SECRET_KEY=your_secret_key
+```
+# Clerk
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
+CLERK_SECRET_KEY=
 
 # Supabase
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
 
-# AI Integration (Optional)
-OPENAI_API_KEY=your_openai_api_key
-ANTHROPIC_API_KEY=your_anthropic_api_key
+# Azure OpenAI
+AZURE_OPENAI_ENDPOINT=
+AZURE_OPENAI_API_KEY=
+AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4o-mini
+
+# Deepgram
+DEEPGRAM_API_KEY=
+
+# Application
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-## Features
-
-- 🔐 Authentication with Clerk (middleware protection)
-- 🗄️ Supabase Database with third-party auth integration
-- 🤖 AI Chat Interface with OpenAI/Anthropic support
-- 🎨 40+ shadcn/ui components (New York style)
-- 🌙 Dark mode with system preference detection
-- 🎯 Built-in setup dashboard with service status
-- 🚀 App Router with Server Components
-- 🔒 Row Level Security examples with Clerk user IDs
-- 📱 Responsive design with TailwindCSS v4
-- 🎨 Custom fonts (Geist Sans, Geist Mono, Parkinsans)
-
-## Project Structure
+## Structure
 
 ```
-codeguide-starter-kit/
-├── src/
-│   ├── app/                    # Next.js app router pages
-│   │   ├── api/chat/          # AI chat API endpoint
-│   │   ├── globals.css        # Global styles with dark mode
-│   │   ├── layout.tsx         # Root layout with providers
-│   │   └── page.tsx           # Hero + setup dashboard
-│   ├── components/            # React components
-│   │   ├── ui/                # shadcn/ui components (40+)
-│   │   ├── chat.tsx           # AI chat interface
-│   │   ├── theme-provider.tsx # Theme context
-│   │   └── theme-toggle.tsx   # Dark mode toggle
-│   ├── lib/                   # Utility functions
-│   │   ├── supabase.ts        # Supabase client with Clerk auth
-│   │   ├── user.ts            # User utilities
-│   │   ├── utils.ts           # General utilities
-│   │   └── env-check.ts       # Environment validation
-│   └── middleware.ts          # Clerk route protection
-├── supabase/
-│   └── migrations/            # Database migrations with RLS examples
-├── CLAUDE.md                  # AI coding agent documentation
-├── SUPABASE_CLERK_SETUP.md   # Integration setup guide
-└── components.json            # shadcn/ui configuration
+src/
+├── app/
+│   ├── layout.tsx           # Providers (Clerk, thème), langue par défaut en DE
+│   ├── page.tsx             # Dashboard MVP (patients, transcription, SOAP)
+│   └── globals.css          # Tokens Tailwind + thèmes
+├── components/              # shadcn/ui & primitives spécifiques
+├── lib/                     # Supabase, utils Clerk
+└── middleware.ts            # Protection Clerk (routes app)
+supabase/
+└── migrations/              # Ajoutez ici les migrations patients/visites/notes
 ```
 
-## Database Integration
+## Prochaines étapes (résumé)
 
-This starter includes modern Clerk + Supabase integration:
+1. Écrire les migrations Supabase (`patients`, `visits`, `notes`, `transcripts`).
+2. Implémenter le module transcription live (client AudioRecorder → API proxy Deepgram).
+3. Ajouter les écrans patients/visites avec Server Actions.
+4. Intégrer Azure OpenAI via Vercel AI SDK + validation Zod des notes SOAP.
+5. Ajouter la purge automatique des audios et le suivi des versions de note.
 
-- **Third-party auth** (not deprecated JWT templates)
-- **Row Level Security** policies using `auth.jwt() ->> 'sub'` for Clerk user IDs
-- **Example migrations** with various RLS patterns (user-owned, public/private, collaboration)
-- **Server-side client** with automatic Clerk token handling
-
-## AI Coding Agent Integration
-
-This starter is optimized for AI coding agents:
-
-- **`CLAUDE.md`** - Comprehensive project context and patterns
-- **Setup guides** with detailed integration steps
-- **Example migrations** with RLS policy templates
-- **Clear file structure** and naming conventions
-- **TypeScript integration** with proper type definitions
-
-## Documentation Setup
-
-To implement the generated documentation from CodeGuide:
-
-1. Create a `documentation` folder in the root directory:
-   ```bash
-   mkdir documentation
-   ```
-
-2. Place all generated markdown files from CodeGuide in this directory:
-   ```bash
-   # Example structure
-   documentation/
-   ├── project_requirements_document.md             
-   ├── app_flow_document.md
-   ├── frontend_guideline_document.md
-   └── backend_structure_document.md
-   ```
-
-3. These documentation files will be automatically tracked by git and can be used as a reference for your project's features and implementation details.
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
+Pour plus de détails : consulter la section Build Plan du PRD. Toute référence à « CodeGuide Starter » a été retirée ; ce dépôt est maintenant aligné sur EVA Note.

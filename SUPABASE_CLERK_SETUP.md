@@ -1,125 +1,71 @@
-# Clerk + Supabase Integration Setup Guide
+# Intégration Clerk + Supabase (EVA Note)
 
-This guide will help you set up the integration between Clerk and Supabase using the modern third-party auth approach. This setup uses Clerk for user management and Supabase for your application data.
+Ce guide résume la configuration nécessaire pour faire communiquer Clerk (authentification) et Supabase (données patients/visites/notes) dans le contexte EVA Note.
 
-## Prerequisites
+## Prérequis
 
-- A Clerk account and application
-- A Supabase project
-- Next.js application with both `@clerk/nextjs` and `@supabase/supabase-js` installed
+- Projet Clerk configuré en région EU.
+- Projet Supabase (région EU) avec Row Level Security activé.
+- Next.js 15 avec `@clerk/nextjs` et `@supabase/supabase-js`.
 
-## Step 1: Configure Supabase Third-Party Auth
+## Étapes de configuration
 
-1. Go to your **Supabase Dashboard**
-2. Navigate to **Authentication > Integrations**
-3. Add a new **Third-Party Auth** integration
-4. Select **Clerk** from the list
-5. Follow the configuration steps provided by Supabase
+### 1. Activer l’auth tierce côté Supabase
+1. Supabase Dashboard → **Authentication > Integrations**.
+2. Ajouter **Third-party auth** et choisir **Clerk**.
+3. Copier les valeurs demandées (Project URL, JWT templates).
 
-## Step 2: Configure Clerk for Supabase
+### 2. Configurer Clerk pour Supabase
+1. Clerk Dashboard → **Connect > Supabase**.
+2. Suivre l’assistant pour exposer l’ID utilisateur dans `auth.jwt() ->> 'sub'`.
+3. Ajouter l’URL Supabase dans les allowlists Clerk si nécessaire.
 
-1. Visit **Clerk's Connect with Supabase** page in your Clerk dashboard
-2. Follow the setup instructions to configure your Clerk instance for Supabase compatibility
-3. This will set up the necessary JWT claims and configuration
+### 3. Variables d’environnement
 
-## Step 3: Environment Variables
-
-Copy your `.env.example` to `.env.local` and fill in the required values:
-
-```bash
-# Clerk Authentication
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
-CLERK_SECRET_KEY=sk_test_...
+```
+# Clerk
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
+CLERK_SECRET_KEY=
 
 # Supabase
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
 ```
 
-## Step 4: Test the Integration
+### 4. Clients Supabase
 
-1. Start your Next.js application
-2. Sign up/in through Clerk
-3. Try making authenticated requests to Supabase
+- **Côté serveur** : `createSupabaseServerClient()` (`src/lib/supabase.ts`) ajoute automatiquement le token Clerk dans les headers.
+- **Côté client** : utiliser `supabase` exporté + `useAuth().getToken()` puis `.auth(token)` pour les opérations interactives.
 
-## Usage Examples
+### 5. Migrations à créer
 
-### Server-side data fetching:
+Les tables de démonstration ont été supprimées. Créez des migrations adaptées au MVP :
 
-```typescript
-import { createSupabaseServerClient } from '@/lib/supabase'
+- `patients` : `id`, `clerk_user_id`, `first_name`, `last_name`, timestamps.
+- `visits` : lien patient, état (`draft`, `recording`, `transcribing`, `ready`...), timestamps.
+- `visit_audio` : stockage metadata audio (clé storage privée, date purge).
+- `transcripts` : texte + référence Deepgram + horodatage.
+- `notes` : contenu SOAP (JSONB), `version`, `model`, `updated_by`.
 
-export async function getData() {
-  const supabase = await createSupabaseServerClient()
-  
-  const { data, error } = await supabase
-    .from('your_table')
-    .select('*')
-  
-  return data
-}
-```
-
-### Client-side usage:
-
-```typescript
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@clerk/nextjs'
-
-function MyComponent() {
-  const { getToken } = useAuth()
-
-  const fetchData = async () => {
-    const token = await getToken()
-    
-    const { data, error } = await supabase
-      .from('your_table')
-      .select('*')
-      .auth(token)
-  }
-}
-```
-
-### Get current user (from Clerk):
-
-```typescript
-import { getCurrentUser } from '@/lib/user'
-
-export async function ProfilePage() {
-  const user = await getCurrentUser()
-  
-  if (!user) {
-    redirect('/sign-in')
-  }
-  
-  return <div>Welcome {user.firstName}!</div>
-}
-```
-
-## Row Level Security (RLS)
-
-Create RLS policies in your Supabase tables that use Clerk user IDs. Example:
+Activer RLS sur chaque table et créer des policies du type :
 
 ```sql
--- Enable RLS on your table
-ALTER TABLE your_table ENABLE ROW LEVEL SECURITY;
-
--- Allow users to read their own data
-CREATE POLICY "Users can read own data" ON your_table
-  FOR SELECT USING (auth.jwt() ->> 'sub' = user_id);
-
--- Allow users to insert their own data
-CREATE POLICY "Users can insert own data" ON your_table
-  FOR INSERT WITH CHECK (auth.jwt() ->> 'sub' = user_id);
+create policy "Users manage their patients" on public.patients
+  for all using (auth.jwt() ->> 'sub' = clerk_user_id)
+  with check (auth.jwt() ->> 'sub' = clerk_user_id);
 ```
 
-## Troubleshooting
+### 6. Tests rapides
 
-### Authentication errors
-- Ensure third-party auth is properly configured in Supabase
-- Verify your Supabase URL and keys are correct
-- Check that RLS policies allow the operations you're trying to perform
+1. Lancer l’app (`npm run dev`).
+2. Se connecter via Clerk.
+3. Depuis une action serveur, requêter Supabase (ex. `await supabase.from('patients').select('*')`).
+4. Vérifier dans les logs Supabase que le JWT contient bien l’ID Clerk et que les policies passent.
 
-### Token issues
-- Make sure you're using `createSupabaseServerClient()` for server-side operations
-- For client-side, ensure you're passing the Clerk token to Supabase
+## Tips & bonnes pratiques
+
+- Utiliser le **Service Role Key** uniquement côté serveur (API routes / server actions) pour tâches d’arrière-plan (purge audio, recalculs).
+- En dev, penser à révoquer les tokens Clerk lorsqu’on change de projet Supabase.
+- Journaliser `auth.userId` côté serveur pour déboguer les policies.
+- Documenter chaque migration dans le PRD pour garder le modèle en phase avec la roadmap.

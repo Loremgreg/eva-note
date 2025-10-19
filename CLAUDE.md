@@ -1,416 +1,70 @@
-# CLAUDE.md - CodeGuide Starter Kit
+# CLAUDE.md — EVA Note Context
 
-This file contains essential context about the project structure, technologies, and conventions to help Claude understand and work effectively within this codebase.
+## Projet
 
-## Project Overview
+EVA Note est un MVP web pour kinésithérapeutes européens. Le flux principal :
 
-**CodeGuide Starter Kit** is a modern Next.js starter template featuring authentication, database integration, AI capabilities, and a comprehensive UI component system.
+1. Authentification via Clerk (tenant EU, UI DE par défaut).
+2. Gestion minimale des patients (prénom/nom, sélection).
+3. Démarrage d’une visite : enregistrement audio navigateur (streaming temps réel) ou saisie manuelle.
+4. Transcription live via Deepgram (Nova-3 DE) avec suppression immédiate des audios une fois traités.
+5. Génération d’une note SOAP détaillée (S/O/A/P) via Azure OpenAI (gpt-4o-mini) + validation JSON (Zod).
+6. Révision/édition/sauvegarde, versions, copie formatée.
 
-### Core Technologies
+Le PRD détaillé et la stratégie d’implémentation se trouvent dans `eva_note_mvp_prd_system_design_build_plan.md`.
 
-- **Framework**: Next.js 15 with App Router (`/src/app` directory structure)
-- **Language**: TypeScript with strict mode enabled
-- **Styling**: TailwindCSS v4 with CSS custom properties
-- **UI Components**: shadcn/ui (New York style) with Lucide icons
-- **Authentication**: Clerk with middleware protection
-- **Database**: Supabase with third-party auth integration
-- **AI Integration**: Vercel AI SDK with support for Anthropic Claude and OpenAI
-- **Theme System**: next-themes with dark mode support
+## Stack & conventions
 
-## Project Structure
+- **Framework** : Next.js 15 (App Router), React 19, TypeScript strict, Server Actions.
+- **UI** : Tailwind CSS v4, shadcn/ui (New York), tokens dans `src/app/globals.css`.
+- **Auth** : Clerk (`ClerkProvider` dans `layout.tsx`, middleware dans `src/middleware.ts`).
+- **Data** : Supabase (RLS basées sur `auth.jwt() ->> 'sub'` des utilisateurs Clerk). Les migrations par défaut du starter ont été supprimées.
+- **AI** : Vercel AI SDK configuré vers Azure OpenAI, prompts SOAP en allemand avec validation Zod.
+- **Transcription** : Deepgram WebSocket (stream Opus). Prévoir proxy côté serveur pour gérer les clés et purger l’audio.
+- **Langue** : Interface en allemand pour le MVP. Internationalisation post-MVP (prévoir `language_pref`).
+
+## Structure actuelle
 
 ```
 src/
-├── app/                    # Next.js App Router
-│   ├── api/               # API routes
-│   │   └── chat/          # AI chat endpoint
-│   ├── globals.css        # Global styles with dark mode
-│   ├── layout.tsx         # Root layout with providers
-│   └── page.tsx           # Home page with status dashboard
+├── app/
+│   ├── layout.tsx        # Metadata EVA, ClerkProvider, ThemeProvider
+│   ├── page.tsx          # Dashboard MVP (à remplacer par écrans patients/visites)
+│   ├── globals.css       # Styles globaux + tokens
+│   └── api/              # (vide) — ajouter futurs endpoints Deepgram / SOAP
 ├── components/
-│   ├── ui/                # shadcn/ui components (40+ components)
-│   ├── chat.tsx           # AI chat interface
-│   ├── setup-guide.tsx    # Configuration guide
-│   ├── theme-provider.tsx # Theme context provider
-│   └── theme-toggle.tsx   # Dark mode toggle components
+│   ├── theme-provider.tsx
+│   ├── theme-toggle.tsx
+│   └── ui/               # shadcn/ui (garder seulement les composants utilisés)
 ├── lib/
-│   ├── utils.ts           # Utility functions (cn, etc.)
-│   ├── supabase.ts        # Supabase client configurations
-│   ├── user.ts            # User utilities using Clerk
-│   └── env-check.ts       # Environment validation
-└── middleware.ts          # Clerk authentication middleware
+│   ├── supabase.ts       # Client Supabase (server/client) avec Clerk
+│   ├── user.ts
+│   └── utils.ts
+└── middleware.ts
 ```
 
-## Key Configuration Files
+## Points d’attention
 
-- **package.json**: Dependencies and scripts
-- **components.json**: shadcn/ui configuration (New York style, neutral colors)
-- **tsconfig.json**: TypeScript configuration with path aliases (`@/`)
-- **.env.example**: Environment variables template
-- **SUPABASE_CLERK_SETUP.md**: Integration setup guide
+- **Sécurité données** : audio, transcript et note doivent rester privés. Pas de stockage public. Supprimer les audios dès que la transcription est confirmée.
+- **Réglementaire** : noter le consentement patient (v2) et maintenir la possibilité de revue humaine (note toujours modifiable).
+- **Langue** : toutes les sorties (UI + prompts) en allemand au MVP.
+- **Performances** : latence sous-titres < 1 s, génération SOAP < 10 s. Prévoir retries (3) sur Deepgram / Azure.
+- **Versioning notes** : stocker `model`, `version`, timestamps; conserver historique.
 
-## Authentication & Database
+## Étapes à implémenter
 
-### Clerk Integration
-- Middleware protects `/dashboard(.*)` and `/profile(.*)` routes
-- Components: `SignInButton`, `SignedIn`, `SignedOut`, `UserButton`
-- User utilities in `src/lib/user.ts` use `currentUser()` from Clerk
+1. Modélisation Supabase : `patients`, `visits`, `visit_audio`, `transcripts`, `notes`.
+2. UI patients/visites : listes, détails, état enregistrement/transcription.
+3. Service Deepgram : obtention token, streaming, purge audio.
+4. Génération SOAP : prompts (system+user), validation Zod, regénération partielle, bouton copier.
+5. Observabilité : toasts, logs Sentry (à ajouter), suivi latence.
 
-### Supabase Integration
-- **Client**: `createSupabaseServerClient()` for server-side with Clerk tokens  
-- **RLS**: Row Level Security uses `auth.jwt() ->> 'sub'` for Clerk user IDs
-- **Example Migration**: `supabase/migrations/001_example_tables_with_rls.sql`
+## Guidelines pour contributions
 
-#### Supabase Client Usage Patterns
+- Respecter le style Tailwind existant (classe `bg-background`, `text-foreground`, etc.) et la palette définie dans `globals.css`.
+- Favoriser les Server Components/Actions quand possible. Basculer en Client Component uniquement si obligation (enregistrement audio, toasts, etc.).
+- Ajouter des tests unitaires sur les helpers côté serveur (ex. validation SOAP).
+- Les composants `ui/` inutilisés peuvent être supprimés au fur et à mesure pour alléger le bundle.
+- Documenter dans le PRD lorsqu’une fonctionnalité est finalisée ou modifiée.
 
-**Server-side (Recommended for data fetching):**
-```typescript
-import { createSupabaseServerClient } from "@/lib/supabase"
-
-export async function getServerData() {
-  const supabase = await createSupabaseServerClient()
-  
-  const { data, error } = await supabase
-    .from('posts')
-    .select('*')
-    .order('created_at', { ascending: false })
-  
-  if (error) {
-    console.error('Database error:', error)
-    return null
-  }
-  
-  return data
-}
-```
-
-**Client-side (For interactive operations):**
-```typescript
-"use client"
-
-import { supabase } from "@/lib/supabase"
-import { useAuth } from "@clerk/nextjs"
-
-function ClientComponent() {
-  const { getToken } = useAuth()
-
-  const fetchData = async () => {
-    const token = await getToken()
-    
-    // Pass token manually for client-side operations
-    const { data, error } = await supabase
-      .from('posts')
-      .select('*')
-      .auth(token)
-    
-    return data
-  }
-}
-```
-
-## UI & Styling
-
-### TailwindCSS Setup
-- **Version**: TailwindCSS v4 with PostCSS
-- **Custom Properties**: CSS variables for theming
-- **Dark Mode**: Class-based with `next-themes`
-- **Animations**: `tw-animate-css` package included
-
-### shadcn/ui Components
-- **Style**: New York variant
-- **Theme**: Neutral base color with CSS variables
-- **Icons**: Lucide React
-- **Components Available**: 40+ UI components (Button, Card, Dialog, etc.)
-
-### Theme System
-- **Provider**: `ThemeProvider` in layout with system detection
-- **Toggle Components**: `ThemeToggle` (dropdown) and `SimpleThemeToggle` (button)
-- **Persistence**: Automatic theme persistence across sessions
-
-## AI Integration
-
-### Vercel AI SDK
-- **Endpoint**: `/api/chat/route.ts`
-- **Providers**: Anthropic Claude and OpenAI support
-- **Chat Component**: Real-time streaming chat interface
-- **Authentication**: Requires Clerk authentication
-
-## Development Conventions
-
-### File Organization
-- **Components**: Use PascalCase, place in appropriate directories
-- **Utilities**: Place reusable functions in `src/lib/`
-- **Types**: Define alongside components or in dedicated files
-- **API Routes**: Follow Next.js App Router conventions
-
-### Import Patterns
-```typescript
-// Path aliases (configured in tsconfig.json)
-import { Button } from "@/components/ui/button"
-import { getCurrentUser } from "@/lib/user"
-import { supabase } from "@/lib/supabase"
-
-// External libraries
-import { useTheme } from "next-themes"
-import { SignedIn, useAuth } from "@clerk/nextjs"
-```
-
-### Component Patterns
-```typescript
-// Client components (when using hooks/state)
-"use client"
-
-// Server components (default, for data fetching)
-export default async function ServerComponent() {
-  const user = await getCurrentUser()
-  // ...
-}
-```
-
-## Environment Variables
-
-Required for full functionality:
-
-```bash
-# Clerk Authentication
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
-CLERK_SECRET_KEY=sk_test_...
-
-# Supabase Database
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
-
-# AI Integration (optional)
-OPENAI_API_KEY=sk-...
-ANTHROPIC_API_KEY=sk-ant-...
-```
-
-## Common Patterns
-
-### Row Level Security (RLS) Policies
-
-All database tables should use RLS policies that reference Clerk user IDs via `auth.jwt() ->> 'sub'`.
-
-**Basic User-Owned Data Pattern:**
-```sql
--- Enable RLS on table
-ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
-
--- Users can read all posts (public)
-CREATE POLICY "Anyone can read posts" ON posts
-  FOR SELECT USING (true);
-
--- Users can only insert posts as themselves
-CREATE POLICY "Users can insert own posts" ON posts
-  FOR INSERT WITH CHECK (auth.jwt() ->> 'sub' = user_id);
-
--- Users can only update their own posts
-CREATE POLICY "Users can update own posts" ON posts
-  FOR UPDATE USING (auth.jwt() ->> 'sub' = user_id);
-
--- Users can only delete their own posts
-CREATE POLICY "Users can delete own posts" ON posts
-  FOR DELETE USING (auth.jwt() ->> 'sub' = user_id);
-```
-
-**Private Data Pattern:**
-```sql
--- Completely private to each user
-CREATE POLICY "Users can only access own data" ON private_notes
-  FOR ALL USING (auth.jwt() ->> 'sub' = user_id);
-```
-
-**Conditional Visibility Pattern:**
-```sql
--- Public profiles or own profile
-CREATE POLICY "Users can read public profiles or own profile" ON profiles
-  FOR SELECT USING (
-    is_public = true OR auth.jwt() ->> 'sub' = user_id
-  );
-```
-
-**Collaboration Pattern:**
-```sql
--- Owner and collaborators can access
-CREATE POLICY "Owners and collaborators can read" ON collaborations
-  FOR SELECT USING (
-    auth.jwt() ->> 'sub' = owner_id OR 
-    auth.jwt() ->> 'sub' = ANY(collaborators)
-  );
-```
-
-### Database Operations with Supabase
-
-**Complete CRUD Example:**
-```typescript
-import { createSupabaseServerClient } from "@/lib/supabase"
-import { getCurrentUser } from "@/lib/user"
-
-// CREATE - Insert new record
-export async function createPost(title: string, content: string) {
-  const user = await getCurrentUser()
-  if (!user) return null
-  
-  const supabase = await createSupabaseServerClient()
-  
-  const { data, error } = await supabase
-    .from('posts')
-    .insert({
-      title,
-      content,
-      user_id: user.id, // Clerk user ID
-    })
-    .select()
-    .single()
-  
-  if (error) {
-    console.error('Error creating post:', error)
-    return null
-  }
-  
-  return data
-}
-
-// READ - Fetch user's posts
-export async function getUserPosts() {
-  const supabase = await createSupabaseServerClient()
-  
-  const { data, error } = await supabase
-    .from('posts')
-    .select(`
-      id,
-      title,
-      content,
-      created_at,
-      user_id
-    `)
-    .order('created_at', { ascending: false })
-  
-  if (error) {
-    console.error('Error fetching posts:', error)
-    return []
-  }
-  
-  return data
-}
-
-// UPDATE - Modify existing record
-export async function updatePost(postId: string, updates: { title?: string; content?: string }) {
-  const supabase = await createSupabaseServerClient()
-  
-  const { data, error } = await supabase
-    .from('posts')
-    .update(updates)
-    .eq('id', postId)
-    .select()
-    .single()
-  
-  if (error) {
-    console.error('Error updating post:', error)
-    return null
-  }
-  
-  return data
-}
-
-// DELETE - Remove record
-export async function deletePost(postId: string) {
-  const supabase = await createSupabaseServerClient()
-  
-  const { error } = await supabase
-    .from('posts')
-    .delete()
-    .eq('id', postId)
-  
-  if (error) {
-    console.error('Error deleting post:', error)
-    return false
-  }
-  
-  return true
-}
-```
-
-**Real-time Subscriptions:**
-```typescript
-"use client"
-
-import { useEffect, useState } from "react"
-import { supabase } from "@/lib/supabase"
-import { useAuth } from "@clerk/nextjs"
-
-function useRealtimePosts() {
-  const [posts, setPosts] = useState([])
-  const { getToken } = useAuth()
-
-  useEffect(() => {
-    const fetchPosts = async () => {
-      const token = await getToken()
-      
-      const { data } = await supabase
-        .from('posts')
-        .select('*')
-        .auth(token)
-      
-      setPosts(data || [])
-    }
-
-    fetchPosts()
-
-    // Subscribe to changes
-    const subscription = supabase
-      .channel('posts-channel')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'posts' }, 
-        (payload) => {
-          fetchPosts() // Refetch on any change
-        }
-      )
-      .subscribe()
-
-    return () => {
-      subscription.unsubscribe()
-    }
-  }, [getToken])
-
-  return posts
-}
-```
-
-### Protected Routes
-Routes matching `/dashboard(.*)` and `/profile(.*)` are automatically protected by Clerk middleware.
-
-### Theme-Aware Components
-```typescript
-// Automatic dark mode support via CSS custom properties
-<div className="bg-background text-foreground border-border">
-  <Button variant="outline">Themed Button</Button>
-</div>
-```
-
-## Development Commands
-
-```bash
-npm run dev          # Start development server with Turbopack
-npm run build        # Build for production  
-npm run start        # Start production server
-npm run lint         # Run ESLint
-```
-
-## Best Practices
-
-1. **Authentication**: Always check user state with Clerk hooks/utilities
-2. **Database**: Use RLS policies with Clerk user IDs for security
-3. **UI**: Leverage existing shadcn/ui components before creating custom ones
-4. **Styling**: Use TailwindCSS classes and CSS custom properties for theming
-5. **Types**: Maintain strong TypeScript typing throughout
-6. **Performance**: Use server components by default, client components only when needed
-
-## Integration Notes
-
-- **Clerk + Supabase**: Uses modern third-party auth (not deprecated JWT templates)
-- **AI Chat**: Requires authentication and environment variables
-- **Dark Mode**: Automatically applied to all shadcn components
-- **Mobile**: Responsive design with TailwindCSS breakpoints
-
-This starter kit provides a solid foundation for building modern web applications with authentication, database integration, AI capabilities, and polished UI components.
+Cette base est nettoyée des éléments CodeGuide. Utilise ce document comme référence rapide avant toute modification.
